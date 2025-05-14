@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hesaplama Uygulaması</title>
+  <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Algebra.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Calculus.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Solve.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Extra.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f0f4f7;
+    }
+    h1 {
+      text-align: center;
+      color: #0d47a1;
+    }
+    .box, .geometryBox {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin: 20px auto;
+      max-width: 600px;
+    }
+    label, input, select {
+      display: block;
+      margin-bottom: 10px;
+    }
+    input, select {
+      width: 97%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #2196f3;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #1976d2;
+    }
+    .result {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Hesaplama Uygulaması</h1>
+
+  <!-- Fonksiyon ve Görüntü Kümesi -->
+  <div class="box">
+    <h2>Fonksiyon ve Görüntü Kümesi</h2>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <label for="functionInput" style="white-space: nowrap;"><strong>f(x) =</strong></label>
+      <input id="functionInput" type="text" placeholder="x*x + 2" style="flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc;" />
+    </div>
+    <input id="domainInput" type="text" placeholder="Tanım kümesi: 1,2,3" />
+    <input id="rangeInput" type="text" placeholder="Görüntü kümesi: 3,6,11" />
+    <button onclick="checkFunctionRange()">Kontrol Et</button>
+    <div id="result" class="result"></div>
+    <div id="calculatedValues" class="result" style="font-weight: normal;"></div>
+  </div>
+
+  <!-- Denklem Çözme -->
+  <div class="box">
+    <h2>Denklem Çöz</h2>
+    <label for="equation">Denklem (ör: x*x - 4):</label>
+    <input type="text" id="equation" placeholder="x*x - 4" />
+    <button onclick="solveEquation()">Çöz</button>
+    <div id="equationResult" class="result"></div>
+  </div>
+
+  <!-- Geometrik Hesaplamalar -->
+  <div class="geometryBox">
+    <h2>Geometrik Hesaplamalar</h2>
+    <label for="shape">Şekil Seçin:</label>
+    <select id="shape" onchange="updateInputs()">
+      <option value="triangle">Üçgen</option>
+      <option value="square">Kare</option>
+      <option value="rectangle">Dikdörtgen</option>
+      <option value="trapezoid">Yamuk</option>
+      <option value="parallelogram">Paralelkenar</option>
+      <option value="rhombus">Eşkenar Dörtgen</option>
+    </select>
+    <div id="inputs"></div>
+    <button onclick="calculateGeometry()">Hesapla</button>
+    <div id="geometryResult" class="result"></div>
+  </div>
+
+  <script>
+    function checkFunctionRange() {
+  const funcInput = document.getElementById('functionInput').value;
+  const domainInput = document.getElementById('domainInput').value.split(',').map(x => parseFloat(x.trim()));
+  const expectedRange = document.getElementById('rangeInput').value.split(',').map(x => parseFloat(x.trim()));
+  
+  const calculatedRange = [];
+  let calculatedPairs = '';
+
+  for (let x of domainInput) {
+    try {
+      const fx = eval(funcInput.replace(/x/g, `(${x})`));
+      calculatedRange.push(fx);
+      calculatedPairs += `f(${x}) = ${fx}<br/>`;
+    } catch (e) {
+      document.getElementById('result').innerHTML = "Fonksiyon hatalı: " + e.message;
+      document.getElementById('calculatedValues').innerHTML = "";
+      return;
+    }
+  }
+
+  // Görüntü kümesi kontrolü
+  const isEqual = arraysEqualIgnoreOrder(calculatedRange, expectedRange);
+  let resultText = isEqual 
+    ? "✅ Görüntü kümesi doğru!"
+    : `❌ Görüntü kümesi yanlış.<br/>Beklenen: [${expectedRange}]<br/>Hesaplanan: [${calculatedRange}]`;
+
+  // Polinom kontrolü (doğal sayı kuvveti ve rasyonel katsayı)
+  const isPolynomial = checkIfPolynomial(funcInput);
+
+  resultText += `<br/><br/><strong>Fonksiyon türü:</strong> ${isPolynomial ? "Polinom Fonksiyon" : "Polinom Değil"}`;
+
+  document.getElementById('result').innerHTML = resultText;
+  document.getElementById('calculatedValues').innerHTML = `<strong>Hesaplanan f(x) değerleri:</strong><br/>${calculatedPairs}`;
+}
+
+// Yardımcı fonksiyon: Dizi eşitliği
+function arraysEqualIgnoreOrder(a, b) {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort((x, y) => x - y);
+  const sortedB = [...b].sort((x, y) => x - y);
+  return sortedA.every((val, index) => Math.abs(val - sortedB[index]) < 1e-9);
+}
+
+// Yardımcı fonksiyon: Polinom kontrolü
+function checkIfPolynomial(funcStr) {
+  const cleaned = funcStr.toLowerCase().replace(/\s+/g, '');
+
+  // Geçersiz fonksiyonları (trig, log, sqrt vs.) anında reddet
+  const invalidPatterns = /(sin|cos|tan|log|ln|sqrt|abs|\d+\/x|x\/|\/x|x\^\()/;
+  if (invalidPatterns.test(cleaned)) return false;
+
+  // Tüm terimleri ayrıştır
+  const terms = cleaned.split(/(?=[\+\-])/); // + veya - ile ayrılmış terimler
+
+  for (let term of terms) {
+    if (term.includes('x')) {
+      const expMatch = term.match(/x\^([\-]?\d+(\.\d+)?)/); // x^n varsa
+      if (expMatch) {
+        const exponent = parseFloat(expMatch[1]);
+        if (!Number.isInteger(exponent) || exponent < 0) {
+          return false; // Negatif veya kesirli üst
+        }
+      } else if (term.includes('x') && term.includes('^') === false) {
+        // x ama x^n değilse → x^1 demektir, bu geçerli
+        continue;
+      } else {
+        return false; // karmaşık veya uygunsuz kullanım
+      }
+    } else {
+      // x içermeyen terim: sabit sayı olabilir (katsayı), kontrol et
+      if (isNaN(Number(term))) return false; // Sabit sayı değilse geçersiz
+    }
+  }
+
+  return true;
+}
+
+
+
+    function arraysEqualIgnoreOrder(a, b) {
+      if (a.length !== b.length) return false;
+      const sortedA = [...a].sort((x, y) => x - y);
+      const sortedB = [...b].sort((x, y) => x - y);
+      return sortedA.every((val, index) => Math.abs(val - sortedB[index]) < 1e-9);
+    }
+
+    function solveEquation() {
+  const input = document.getElementById("equation").value;
+  const resultElement = document.getElementById("equationResult");
+
+  try {
+    // Eşitlik yoksa otomatik olarak =0 kabul et
+    let equation = input.includes("=") ? input : `${input}=0`;
+
+    // Her iki tarafı al
+    const [left, right] = equation.split("=");
+    const leftExpr = nerdamer(left).toString();
+    const rightExpr = nerdamer(right).toString();
+
+    // Sol - sağ = 0 olacak şekilde sadeleştir
+    const fullExpr = nerdamer(`(${leftExpr}) - (${rightExpr})`).expand().toString();
+
+    // Çözüm üret
+    const rawSolutions = nerdamer.solve(fullExpr, 'x');
+
+    // Çözüm varsa formatla
+    if (!rawSolutions || rawSolutions.text() === '[]') {
+      resultElement.innerHTML = "❌ Gerçek kök bulunamadı.";
+      return;
+    }
+
+    // JSON formatında işler
+    const formattedSolutions = rawSolutions.text()
+      .replace(/[\[\]']+/g, '') // köşeli parantezleri ve tek tırnakları kaldır
+      .split(',')
+      .map(sol => `x = ${sol.trim()}`)
+      .join('<br/>');
+
+    resultElement.innerHTML = `<strong>Çözümler:</strong><br/>${formattedSolutions}`;
+  } catch (error) {
+    resultElement.innerHTML = "❌ Hata: Denklem çözülemedi. " + error.message;
+  }
+}
+
+
+
+    function updateInputs() {
+      const shape = document.getElementById("shape").value;
+      const inputsDiv = document.getElementById("inputs");
+      let html = '';
+
+      switch (shape) {
+        case 'triangle':
+          html = `
+            <label>Taban:</label><input type="number" id="base" />
+            <label>Yükseklik:</label><input type="number" id="height" />
+            <label>Kenar 1:</label><input type="number" id="side1" />
+            <label>Kenar 2:</label><input type="number" id="side2" />
+            <label>Kenar 3:</label><input type="number" id="side3" />
+          `;
+          break;
+        case 'square':
+          html = `<label>Kenar Uzunluğu:</label><input type="number" id="side" />`;
+          break;
+        case 'rectangle':
+          html = `<label>Uzunluk:</label><input type="number" id="length" /><label>Genişlik:</label><input type="number" id="width" />`;
+          break;
+        case 'trapezoid':
+          html = `
+            <label>Taban 1:</label><input type="number" id="base1" />
+            <label>Taban 2:</label><input type="number" id="base2" />
+            <label>Yükseklik:</label><input type="number" id="height" />
+            <label>Kenar 1:</label><input type="number" id="side1" />
+            <label>Kenar 2:</label><input type="number" id="side2" />
+          `;
+          break;
+        case 'parallelogram':
+          html = `
+            <label>Taban:</label><input type="number" id="base" />
+            <label>Yükseklik:</label><input type="number" id="height" />
+            <label>Kenar:</label><input type="number" id="side" />
+          `;
+          break;
+        case 'rhombus':
+          html = `
+            <label>Bir Köşegeni:</label><input type="number" id="d1" />
+            <label>Diğer Köşegeni:</label><input type="number" id="d2" />
+            <label>Kenar Uzunluğu:</label><input type="number" id="side" />
+          `;
+          break;
+      }
+
+      inputsDiv.innerHTML = html;
+    }
+
+    function calculateGeometry() {
+      const shape = document.getElementById("shape").value;
+      const resultElement = document.getElementById("geometryResult");
+      let area = 0, perimeter = 0;
+
+      switch (shape) {
+        case 'triangle':
+          const b = parseFloat(document.getElementById("base").value);
+          const h = parseFloat(document.getElementById("height").value);
+          const s1 = parseFloat(document.getElementById("side1").value);
+          const s2 = parseFloat(document.getElementById("side2").value);
+          const s3 = parseFloat(document.getElementById("side3").value);
+          area = 0.5 * b * h;
+          perimeter = s1 + s2 + s3;
+          break;
+        case 'square':
+          const s = parseFloat(document.getElementById("side").value);
+          area = s * s;
+          perimeter = 4 * s;
+          break;
+        case 'rectangle':
+          const l = parseFloat(document.getElementById("length").value);
+          const w = parseFloat(document.getElementById("width").value);
+          area = l * w;
+          perimeter = 2 * (l + w);
+          break;
+        case 'trapezoid':
+          const b1 = parseFloat(document.getElementById("base1").value);
+          const b2 = parseFloat(document.getElementById("base2").value);
+          const ht = parseFloat(document.getElementById("height").value);
+          const t1 = parseFloat(document.getElementById("side1").value);
+          const t2 = parseFloat(document.getElementById("side2").value);
+          area = ((b1 + b2) / 2) * ht;
+          perimeter = b1 + b2 + t1 + t2;
+          break;
+        case 'parallelogram':
+          const pb = parseFloat(document.getElementById("base").value);
+          const ph = parseFloat(document.getElementById("height").value);
+          const ps = parseFloat(document.getElementById("side").value);
+          area = pb * ph;
+          perimeter = 2 * (pb + ps);
+          break;
+        case 'rhombus':
+          const d1 = parseFloat(document.getElementById("d1").value);
+          const d2 = parseFloat(document.getElementById("d2").value);
+          const rs = parseFloat(document.getElementById("side").value);
+          area = (d1 * d2) / 2;
+          perimeter = 4 * rs;
+          break;
+      }
+
+      resultElement.innerText = `Alan: ${area}, Çevre: ${perimeter}`;
+    }
+
+    window.onload = updateInputs;
+  </script>
+ <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Algebra.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Calculus.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Solve.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/Extra.min.js"></script>
+</body>
+</html>
